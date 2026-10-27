@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Chat de WhatsApp</title>
+<style>
+:root{--hdr:#008069;--hdrt:#fff;--bg:#efeae2;--in:#fff;--out:#d9fdd3;--txt:#111b21;--sub:#667781;--sys:#fff3c5;--chip:#fff;--link:#027eb5;--tick:#53bdeb;--bar:#f0f2f5}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--hdr:#202c33;--bg:#0b141a;--in:#202c33;--out:#005c4b;--txt:#e9edef;--sub:#8696a0;--sys:#182229;--chip:#182229;--link:#53bdeb;--bar:#111b21}}
+:root[data-theme=dark]{--hdr:#202c33;--bg:#0b141a;--in:#202c33;--out:#005c4b;--txt:#e9edef;--sub:#8696a0;--sys:#182229;--chip:#182229;--link:#53bdeb;--bar:#111b21}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--txt);display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom,0px)}
+header{background:var(--hdr);color:var(--hdrt);padding:calc(10px + env(safe-area-inset-top,0px)) 12px 10px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]) header{color:#e9edef}}
+:root[data-theme=dark] header{color:#e9edef}
+.av{width:40px;height:40px;border-radius:50%;background:#6a7175;display:grid;place-items:center;font-weight:600;font-size:18px;color:#fff;flex-shrink:0}
+.ti{flex:1;min-width:0}.ti b{display:block;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ti small{opacity:.8;font-size:12px}
+header button,header select,header label.btn{background:rgba(255,255,255,.15);color:inherit;border:0;border-radius:8px;padding:7px 10px;font-size:13px;cursor:pointer;max-width:120px}
+header select option{color:#111}
+#search{display:none;background:var(--bar);padding:8px 12px}
+#search input{width:100%;border:0;border-radius:8px;padding:9px 12px;font-size:15px;background:var(--in);color:var(--txt)}
+#chat{flex:1;overflow-y:auto;padding:12px 8px 16px;display:none}
+#chat>.in{max-width:900px;margin:0 auto;display:flex;flex-direction:column;gap:2px}
+.day,.sys{align-self:center;background:var(--chip);color:var(--sub);font-size:12.5px;padding:5px 12px;border-radius:8px;margin:10px 0 6px;box-shadow:0 1px .5px rgba(11,20,26,.13);text-align:center;max-width:90%}
+.sys{background:var(--sys);font-size:12px;margin:6px 0}
+.m{max-width:80%;padding:6px 8px 5px 9px;border-radius:8px;box-shadow:0 1px .5px rgba(11,20,26,.13);font-size:14.5px;line-height:1.35;white-space:pre-wrap;word-wrap:break-word;overflow-wrap:anywhere;position:relative}
+.m.i{align-self:flex-start;background:var(--in);border-top-left-radius:0}
+.m.o{align-self:flex-end;background:var(--out);border-top-right-radius:0}
+.m.first{margin-top:6px}
+.who{display:block;font-size:12.5px;font-weight:600;margin-bottom:2px}
+.t{float:right;margin:6px 0 -3px 12px;font-size:11px;color:var(--sub);white-space:nowrap;user-select:none}
+.o .t:after{content:" ✓✓";color:var(--tick);letter-spacing:-2px}
+.media{font-style:italic;color:var(--sub)}
+.m a{color:var(--link)}
+mark{background:#ffd54a;color:#000;border-radius:2px}
+#more{align-self:center;background:var(--chip);color:var(--link);border:0;border-radius:8px;padding:8px 14px;cursor:pointer;margin:6px 0}
+#drop{flex:1;display:grid;place-items:center;padding:24px;text-align:center}
+#drop .box{max-width:420px;border:2px dashed var(--sub);border-radius:16px;padding:32px 22px;background:var(--chip)}
+#drop.over .box{border-color:var(--hdr);background:var(--in)}
+#drop h1{font-size:20px;margin:0 0 8px}#drop p{color:var(--sub);font-size:14px;line-height:1.5;margin:6px 0}
+#drop .go{display:inline-block;margin-top:12px;background:#008069;color:#fff;padding:11px 20px;border-radius:24px;font-weight:600;cursor:pointer}
+</style>
+</head>
+<body>
+<header>
+  <div class="av" id="av">💬</div>
+  <div class="ti"><b id="name">Visor de WhatsApp</b><small id="sub">Cargando chat.txt…</small></div>
+  <select id="me" title="¿Quién eres tú?" style="display:none"></select>
+  <button id="sb" style="display:none" title="Buscar">🔍</button>
+  <label class="btn" title="Abrir otro archivo">📂<input type="file" id="f2" accept=".txt,text/plain" hidden></label>
+  <button id="th" title="Tema">🌓</button>
+</header>
+<div id="search"><input id="q" type="search" placeholder="Buscar en el chat…"></div>
+<div id="drop"><div class="box">
+  <h1>Tu chat de WhatsApp, como en WhatsApp</h1>
+  <p>En WhatsApp: abre el chat → ⋮ → Más → <b>Exportar chat</b> → Sin multimedia. Luego carga aquí el archivo .txt.</p>
+  <label class="go">Elegir archivo<input type="file" id="f1" accept=".txt,text/plain" hidden></label>
+  <p>o arrástralo a esta ventana</p>
+  <p style="font-size:12px">🔒 Todo se procesa en tu dispositivo; nada se sube a ningún servidor.</p>
+</div></div>
+<div id="chat"><div class="in" id="list"></div></div>
+
+<script>
+const $=id=>document.getElementById(id);
+let msgs=[],people=[],me="",title="",shown=0,query="";
+const PAGE=400;
+
+const RE_A=/^(\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4}),?\s+(\d{1,2}[:.]\d{2}(?:[:.]\d{2})?)\s*([ap]\.?\s?m\.?)?\s+-\s+([\s\S]*)$/i;
+const RE_I=/^\[(\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4}),?\s+(\d{1,2}[:.]\d{2}(?:[:.]\d{2})?)\s*([ap]\.?\s?m\.?)?\]\s+([\s\S]*)$/i;
+const MEDIA=/<(multimedia|media)[^>]*>|^(imagen|video|audio|sticker|gif|documento|contacto|ubicaci[oó]n)\s+omitid[oa]|\(archivo adjunto\)|^(image|video|audio|sticker|gif|document) omitted|\(file attached\)|este mensaje fue eliminado|se elimin[oó] este mensaje|this message was deleted|mensaje editado/i;
+
+function parse(raw){
+  const lines=raw.replace(/^\uFEFF/,"").replace(/[\u200e\u200f\u202a-\u202e]/g,"").replace(/[\u202f\u00a0]/g," ").split(/\r?\n/);
+  const out=[];
+  for(const l of lines){
+    const m=l.match(RE_A)||l.match(RE_I);
+    if(m){out.push({d:m[1],t:m[2],ap:m[3]||"",body:m[4]});}
+    else if(out.length){out[out.length-1].body+="\n"+l;}
+  }
+  // detect day/month order
+  let dm=true;
+  for(const o of out){const p=o.d.split(/[\/.\-]/).map(Number);if(p[0]>12){dm=true;break}if(p[1]>12){dm=false;break}}
+  const set=new Set();
+  const res=out.map(o=>{
+    const p=o.d.split(/[\/.\-]/).map(Number);
+    let [a,b,y]=p; if(y<100)y+=2000;
+    const day=dm?a:b, mon=dm?b:a;
+    const date=new Date(y,mon-1,day);
+    let time=o.t.replace(/\./,":").replace(/^(\d{1,2}:\d{2}):\d{2}$/,"$1");
+    if(o.ap){const dots=/\./.test(o.ap);const c=o.ap[0].toLowerCase();time+=" "+(dots?c+". m.":c.toUpperCase()+"M");}
+    const mm=o.body.match(/^([^:\n]{1,60}?): ([\s\S]*)$/);
+    const r={date,key:y+"-"+mon+"-"+day,time,text:(mm?mm[2]:o.body).replace(/\s+$/,""),who:mm?mm[1]:null};
+    if(r.who)set.add(r.who);
+    return r;
+  });
+  return {res,people:[...set]};
+}
+
+function esc(s){return s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+function fmt(s,q){
+  let h=esc(s);
+  h=h.replace(/(https?:\/\/[^\s<]+)/g,'<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+  h=h.replace(/(^|[\s(])\*([^*\n]+)\*(?=[\s).,!?:;]|$)/g,"$1<b>$2</b>")
+     .replace(/(^|[\s(])_([^_\n]+)_(?=[\s).,!?:;]|$)/g,"$1<i>$2</i>")
+     .replace(/(^|[\s(])~([^~\n]+)~(?=[\s).,!?:;]|$)/g,"$1<s>$2</s>");
+  if(q){const re=new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"),"gi");h=h.replace(/(<[^>]*>)|([^<]+)/g,(m,tag,txt)=>tag?tag:txt.replace(re,x=>"<mark>"+x+"</mark>"));}
+  return h;
+}
+
+function render(){
+  const list=$("list");list.innerHTML="";
+  const q=query.trim();
+  const data=q?msgs.filter(m=>m.text.toLowerCase().includes(q.toLowerCase())):msgs;
+  const start=Math.max(0,data.length-shown);
+  if(start>0){const b=document.createElement("button");b.id="more";b.textContent="↑ Cargar mensajes anteriores ("+start+")";
+    b.onclick=()=>{const c=$("chat"),h=c.scrollHeight;shown+=PAGE;render();c.scrollTop=c.scrollHeight-h};list.appendChild(b);}
+  let lastKey="",lastWho=null;
+  const fr=document.createDocumentFragment();
+  const dfmt=new Intl.DateTimeFormat("es",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+  for(let i=start;i<data.length;i++){
+    const m=data[i];
+    if(m.key!==lastKey){const d=document.createElement("div");d.className="day";d.textContent=dfmt.format(m.date);fr.appendChild(d);lastKey=m.key;lastWho=null;}
+    if(!m.who){const s=document.createElement("div");s.className="sys";s.innerHTML=fmt(m.text,q);fr.appendChild(s);lastWho=null;continue;}
+    const own=m.who===me;
+    const el=document.createElement("div");
+    el.className="m "+(own?"o":"i")+(lastWho!==m.who?" first":"");
+    let h="";
+    if(!own&&people.length>2&&lastWho!==m.who)h+='<span class="who" style="color:hsl('+hue(m.who)+',55%,48%)">'+esc(m.who)+"</span>";
+    const body=MEDIA.test(m.text)?'<span class="media">'+(/omitid|omitted|attach|adjunto|multimedia|media/i.test(m.text)?"📎 ":"🚫 ")+fmt(m.text.replace(/<|>/g,""),q)+"</span>":fmt(m.text,q);
+    h+=body+'<span class="t">'+esc(m.time)+"</span>";
+    el.innerHTML=h;fr.appendChild(el);lastWho=m.who;
+  }
+  if(!data.length){const s=document.createElement("div");s.className="sys";s.textContent="Sin resultados";fr.appendChild(s);}
+  list.appendChild(fr);
+}
+function hue(s){let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))%360;return h}
+
+function loadText(raw,fname){
+  const {res,people:p}=parse(raw);
+  if(!res.length){$("drop").querySelector("p").textContent="No pude reconocer mensajes en chat.txt. ¿Es una exportación de WhatsApp?";return false}
+  msgs=res;people=p;
+  const fm=(fname||"").match(/(?:con|with)\s+(.+?)(?:\.txt)?$/i);
+  let saved="";try{saved=localStorage.getItem("wa_me")||""}catch(e){}
+  me=p.includes(saved)?saved:(p[0]||"");
+  const sel=$("me");sel.innerHTML=p.map(n=>'<option>'+esc(n)+'</option>').join("");
+  sel.value=me;sel.style.display=p.length>1?"":"none";
+  title=fm?fm[1]:(p.filter(n=>n!==me).join(", ")||p[0]||"Chat");
+  $("name").textContent=title;$("av").textContent=title.trim()[0]?.toUpperCase()||"💬";
+  $("sub").textContent=msgs.length.toLocaleString("es")+" mensajes";
+  $("sb").style.display="";$("drop").style.display="none";$("chat").style.display="block";
+  query="";$("q").value="";shown=PAGE;render();
+  $("chat").scrollTop=$("chat").scrollHeight;
+  return true;
+}
+function load(file){const r=new FileReader();r.onload=()=>loadText(r.result,file.name);r.readAsText(file,"utf-8")}
+// Carga automática de chat.txt (debe estar en la misma carpeta que este HTML)
+fetch("chat.txt").then(r=>{if(!r.ok)throw 0;return r.text()}).then(t=>loadText(t,"")).catch(()=>{
+  const p=$("drop").querySelector("p");
+  p.innerHTML="No pude leer <b>chat.txt</b> automáticamente. Si abriste el HTML con doble clic, el navegador lo bloquea por seguridad: elige el archivo a mano o abre esta carpeta con un servidor local (<code>python3 -m http.server</code>).";
+});
+$("f1").onchange=$("f2").onchange=e=>{if(e.target.files[0])load(e.target.files[0]);e.target.value=""};
+$("me").onchange=e=>{me=e.target.value;try{localStorage.setItem("wa_me",me)}catch(_){}render();$("chat").scrollTop=$("chat").scrollHeight};
+$("sb").onclick=()=>{const s=$("search");s.style.display=s.style.display==="block"?"none":"block";if(s.style.display==="block")$("q").focus()};
+let tmr;$("q").oninput=e=>{clearTimeout(tmr);tmr=setTimeout(()=>{query=e.target.value;shown=PAGE;render();$("chat").scrollTop=query?0:$("chat").scrollHeight},250)};
+$("th").onclick=()=>{const r=document.documentElement,dark=getComputedStyle(r).getPropertyValue("--bg").trim()==="#0b141a";r.dataset.theme=dark?"light":"dark"};
+["dragover","dragenter"].forEach(ev=>document.addEventListener(ev,e=>{e.preventDefault();$("drop").classList.add("over")}));
+["dragleave","drop"].forEach(ev=>document.addEventListener(ev,e=>{e.preventDefault();$("drop").classList.remove("over")}));
+document.addEventListener("drop",e=>{const f=e.dataTransfer.files[0];if(f)load(f)});
+</script>
+</body>
+</html>
